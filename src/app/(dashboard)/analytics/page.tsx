@@ -114,7 +114,6 @@ export default async function AnalyticsPage() {
   )
 }
 
-// 🔸 Компонент карточки метрики (без изменений)
 function StatCard({ title, value, icon, trend }: { 
   title: string; 
   value: number; 
