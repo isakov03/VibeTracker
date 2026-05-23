@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TaskStatus } from "@prisma/client"
 import { cn } from "@/lib/utils"
-import { DeleteTaskButton } from "@/components/tasks/delete-task-button"
 
 const COLUMNS: { key: TaskStatus; label: string; color: string }[] = [
   { key: "TODO", label: "К выполнению", color: "bg-slate-400" },

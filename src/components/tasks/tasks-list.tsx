@@ -2,14 +2,20 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { format } from "date-fns"
+import { ru } from "date-fns/locale"
+import { CalendarIcon } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DeleteTaskButton } from "@/components/tasks/delete-task-button"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { TaskStatus, Priority } from "@prisma/client"
 import { useRouter } from "next/navigation"
+import { DeleteTaskButton } from "./delete-task-button"
 
 type Task = {
   id: string
@@ -29,25 +35,38 @@ export function TasksList({ initialTasks }: TasksListProps) {
   const [titleFilter, setTitleFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "">("")
   const [priorityFilter, setPriorityFilter] = useState<Priority | "">("")
+  const [tagFilter, setTagFilter] = useState("")
+  const [dueDateFilter, setDueDateFilter] = useState<Date | undefined>()
+  
   const router = useRouter()
+
+  const uniqueTags = useMemo(() => {
+    const tags = new Set<string>()
+    initialTasks.forEach((task) => task.tags.forEach((t) => tags.add(t.name)))
+    return Array.from(tags).sort((a, b) => a.localeCompare(b))
+  }, [initialTasks])
 
   const filteredTasks = useMemo(() => {
     return initialTasks.filter((task) => {
       const matchesTitle = task.title.toLowerCase().includes(titleFilter.toLowerCase())
       const matchesStatus = !statusFilter || task.status === statusFilter
       const matchesPriority = !priorityFilter || task.priority === priorityFilter
-      return matchesTitle && matchesStatus && matchesPriority
+      const matchesTag = !tagFilter || task.tags.some((t) => t.name === tagFilter)
+      const matchesDueDate = !dueDateFilter || (task.dueDate && task.dueDate <= dueDateFilter)
+
+      return matchesTitle && matchesStatus && matchesPriority && matchesTag && matchesDueDate
     })
-  }, [initialTasks, titleFilter, statusFilter, priorityFilter])
+  }, [initialTasks, titleFilter, statusFilter, priorityFilter, tagFilter, dueDateFilter])
 
   const clearFilters = () => {
     setTitleFilter("")
     setStatusFilter("")
     setPriorityFilter("")
+    setTagFilter("")
+    setDueDateFilter(undefined)
   }
 
-  const hasActiveFilters = titleFilter || statusFilter || priorityFilter
-  console.log(filteredTasks)
+  const hasActiveFilters = titleFilter || statusFilter || priorityFilter || tagFilter || dueDateFilter
 
   return (
     <div className="space-y-4">
@@ -99,6 +118,61 @@ export function TasksList({ initialTasks }: TasksListProps) {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-col gap-2 min-w-[150px]">
+          <label className="text-sm font-medium">Тег</label>
+          <Select
+            value={tagFilter}
+            onValueChange={(val) => setTagFilter(val as string | "")}
+          >
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="Все теги" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Все теги</SelectItem>
+              {uniqueTags.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  {tag}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-2 min-w-[160px]">
+          <label className="text-sm font-medium">Дедлайн до</label>
+          <Popover>
+            <PopoverTrigger
+              // @ts-expect-error
+              as="button"
+              type="button"
+              className={cn(
+                "inline-flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                "justify-start text-left font-normal",
+                !dueDateFilter && "text-muted-foreground"
+              )}
+            >
+              <span className="flex items-center gap-2 truncate">
+                <CalendarIcon className="h-4 w-4 opacity-50" />
+                {dueDateFilter ? (
+                  format(dueDateFilter, "PPP", { locale: ru })
+                ) : (
+                  <span>Выберите дату</span>
+                )}
+              </span>
+            </PopoverTrigger>
+    
+    <PopoverContent className="w-auto p-0" align="start">
+      <Calendar
+        mode="single"
+        selected={dueDateFilter}
+        onSelect={(date) => {
+          setDueDateFilter(date)
+        }}
+        // @ts-expect-error
+        initialFocus
+      />
+    </PopoverContent>
+  </Popover>
+</div>
 
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10">

@@ -2,44 +2,44 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { BarChart3, CheckCircle2, Clock, AlertCircle, Tag, TrendingUp } from "lucide-react"
+import { getAnalytics } from "@/lib/actions/analytics"
 
-// Фиктивные данные для примера
-const MOCK_STATS = {
-  total: 142,
-  completed: 89,
-  inProgress: 31,
-  overdue: 12,
-  completionRate: 62.7,
-}
+export default async function AnalyticsPage() {
+  const analytics = await getAnalytics(30) // Последние 30 дней
 
-const STATUS_DATA = [
-  { label: "К выполнению", value: 10, color: "bg-slate-400" },
-  { label: "В работе", value: 31, color: "bg-blue-500" },
-  { label: "Готово", value: 89, color: "bg-green-500" },
-  { label: "Архив", value: 12, color: "bg-gray-400" },
-]
-
-const PRIORITY_DATA = [
-  { label: "Высокий", count: 15, color: "bg-red-50 text-red-700 border-red-200" },
-  { label: "Средний", count: 84, color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-  { label: "Низкий", count: 43, color: "bg-green-50 text-green-700 border-green-200" },
-]
-
-export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Аналитика</h1>
-        <Badge variant="secondary" className="text-xs">📅 Последние 30 дней</Badge>
+        <Badge variant="secondary" className="text-xs">
+          📅 {analytics.period.from.toLocaleDateString("ru-RU")} — {analytics.period.to.toLocaleDateString("ru-RU")}
+        </Badge>
       </div>
 
       {/* Карточки сводки */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Всего задач" value={MOCK_STATS.total} icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />} />
-        <StatCard title="Завершено" value={MOCK_STATS.completed} icon={<CheckCircle2 className="h-4 w-4 text-green-500" />} trend="+12%" />
-        <StatCard title="В работе" value={MOCK_STATS.inProgress} icon={<Clock className="h-4 w-4 text-blue-500" />} />
-        <StatCard title="Просрочено" value={MOCK_STATS.overdue} icon={<AlertCircle className="h-4 w-4 text-red-500" />} trend="-5%" />
+        <StatCard 
+          title="Всего задач" 
+          value={analytics.total} 
+          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />} 
+        />
+        <StatCard 
+          title="Завершено" 
+          value={analytics.completed} 
+          icon={<CheckCircle2 className="h-4 w-4 text-green-500" />} 
+          // trend={analytics.trend}
+        />
+        <StatCard 
+          title="В работе" 
+          value={analytics.inProgress} 
+          icon={<Clock className="h-4 w-4 text-blue-500" />} 
+        />
+        <StatCard 
+          title="Просрочено" 
+          value={analytics.overdue} 
+          icon={<AlertCircle className="h-4 w-4 text-red-500" />} 
+        />
       </div>
 
       {/* Графики распределения */}
@@ -50,7 +50,7 @@ export default function AnalyticsPage() {
             <CardTitle>Распределение по статусам</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {STATUS_DATA.map((item) => (
+            {analytics.statusDistribution.map((item) => (
               <div key={item.label} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
@@ -59,7 +59,10 @@ export default function AnalyticsPage() {
                   </span>
                   <span className="font-medium">{item.value}</span>
                 </div>
-                <Progress value={(item.value / MOCK_STATS.total) * 100} className="h-2" />
+                <Progress 
+                  value={analytics.total > 0 ? (item.value / analytics.total) * 100 : 0} 
+                  className="h-2" 
+                />
               </div>
             ))}
           </CardContent>
@@ -71,7 +74,7 @@ export default function AnalyticsPage() {
             <CardTitle>По приоритетам</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {PRIORITY_DATA.map((item) => (
+            {analytics.priorityDistribution.map((item) => (
               <div key={item.label} className={`flex items-center justify-between rounded-lg border p-3 ${item.color}`}>
                 <span className="font-medium">{item.label}</span>
                 <span className="text-xl font-bold">{item.count}</span>
@@ -80,18 +83,44 @@ export default function AnalyticsPage() {
             <div className="mt-4 pt-4 border-t">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Общий прогресс выполнения</span>
-                <span className="font-medium">{MOCK_STATS.completionRate}%</span>
+                <span className="font-medium">{analytics.completionRate}%</span>
               </div>
-              <Progress value={MOCK_STATS.completionRate} className="mt-2 h-2" />
+              <Progress value={analytics.completionRate} className="mt-2 h-2" />
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Популярные теги */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Популярные теги</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {analytics.popularTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {analytics.popularTags.map((tag) => (
+                <Badge key={tag} variant="outline" className="px-3 py-1 hover:bg-muted cursor-default transition-colors">
+                  <Tag className="mr-1 h-3 w-3" /> {tag}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Теги пока не добавлены</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-function StatCard({ title, value, icon, trend }: { title: string; value: number; icon: React.ReactNode; trend?: string }) {
+// 🔸 Компонент карточки метрики (без изменений)
+function StatCard({ title, value, icon, trend }: { 
+  title: string; 
+  value: number; 
+  icon: React.ReactNode; 
+  trend?: string 
+}) {
   return (
     <Card>
       <CardContent className="p-6">
