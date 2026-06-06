@@ -13,7 +13,7 @@ export function AuthPrompt() {
           </div>
           <CardTitle className="text-2xl">Доступ ограничен</CardTitle>
           <CardDescription>
-            Для просмотра задач, канбан-доски и аналитики необходимо войти в аккаунт или создать новый.
+            Для использования сервиса Vibetracker необходимо войти в аккаунт или создать новый.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:justify-center pt-4">

@@ -23,8 +23,8 @@ export default function SignUpPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Имя</Label>
-              <Input id="name" name="name" placeholder="Иван" required disabled={isPending} />
+              <Label htmlFor="name">Имя пользователя</Label>
+              <Input id="name" name="name" placeholder="Example name" required disabled={isPending} />
               {state?.errors?.name && (
                 <p className="text-xs text-red-500">{state.errors.name[0]}</p>
               )}
@@ -40,7 +40,7 @@ export default function SignUpPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Пароль</Label>
-              <Input id="password" name="password" type="password" required disabled={isPending} />
+              <Input id="password" name="password" type="password" placeholder="Не менее 6 символов" required disabled={isPending} />
               {state?.errors?.password && (
                 <p className="text-xs text-red-500">{state.errors.password[0]}</p>
               )}

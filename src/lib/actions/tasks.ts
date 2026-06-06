@@ -15,6 +15,11 @@ export type TaskFilters = {
 
 export async function getTasks(filters?: TaskFilters) {
   const session = await auth()
+
+  if (!session?.user?.id) {
+    throw new Error("Необходима авторизация")
+  }
+
   const userId = session?.user?.id
 
   const where: any = { userId }
@@ -33,7 +38,7 @@ export async function getTasks(filters?: TaskFilters) {
   return prisma.task.findMany({
     where,
     include: { tags: true },
-    orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
   })
 }
 
@@ -47,11 +52,15 @@ export async function createTask(data: {
 }) {
   const tagNames = data.tags?.split(",").map(t => t.trim()).filter(Boolean) || []
   const session = await auth()
+
+  if (!session?.user?.id) {
+    throw new Error("Необходима авторизация")
+  }
+
   const userId = session?.user?.id
 
   try {
     await prisma.task.create({
-      // @ts-expect-error
       data: {
         title: data.title,
         description: data.description || null,

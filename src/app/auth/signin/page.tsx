@@ -53,7 +53,6 @@ export default function SignInPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="you@example.com"
                 required
                 disabled={isPending}
                 autoComplete="email"
