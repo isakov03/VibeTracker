@@ -1,7 +1,6 @@
 
 import { notFound } from "next/navigation"
 import { getTaskById } from "@/lib/actions/tasks"
-// @ts-expect-error
 import { EditTaskForm } from "@/components/tasks/edit-task-form"
 
 export default async function EditTaskPage({
