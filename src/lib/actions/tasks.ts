@@ -95,7 +95,6 @@ export async function updateTask(
     tags?: string
   }
 ) {
-  // const { prisma } = await import("@/lib/prisma")
   const session = await auth()
   
   if (!session?.user?.id) {
@@ -121,7 +120,6 @@ export async function updateTask(
         status: data.status as TaskStatus,
         priority: data.priority as Priority,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        // 🔥 Полная перезапись тегов (удаляем старые, создаём новые)
         tags: {
           set: [], // Удаляем все связи
           connectOrCreate: tagNames.map(name => ({
@@ -140,7 +138,6 @@ export async function updateTask(
 }
 
 export async function getTaskById(taskId: string) {
-  // const { prisma } = await import("@/lib/prisma")
   const session = await auth()
   
   if (!session?.user?.id) {
@@ -154,7 +151,6 @@ export async function getTaskById(taskId: string) {
 }
 
 export async function deleteTask(taskId: string) {
-  // const { prisma } = await import("@/lib/prisma")
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -173,4 +169,30 @@ export async function deleteTask(taskId: string) {
   revalidatePath("/tasks")
   revalidatePath("/")
   return { success: true }
+}
+
+// Подсчёт задач с дедлайном в ближайшие N дней
+export async function getTasksDueInDays(days: number = 7) {
+  const session = await auth()
+  
+  if (!session?.user?.id) {
+    throw new Error("Необходима авторизация")
+  }
+
+  const now = new Date()
+  const futureDate = new Date(now)
+  futureDate.setDate(futureDate.getDate() + days)
+
+  const count = await prisma.task.count({
+    where: {
+      userId: session.user.id,
+      dueDate: {
+        gte: now,
+        lte: futureDate,
+      },
+      status: { notIn: ["DONE", "ARCHIVED"] },
+    },
+  })
+
+  return count
 }

@@ -31,6 +31,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { createTask } from "@/lib/actions/tasks"
+import { predictTaskTimeWithGigaChat } from "@/lib/actions/gigachat"
 
 // Валидация на клиенте
 const taskSchema = z.object({
@@ -46,6 +47,8 @@ export default function NewTaskPage() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [isPredicting, setIsPredicting] = useState(false)
+  const [predictionMsg, setPredictionMsg] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof taskSchema>>({
     // @ts-expect-error
@@ -69,6 +72,39 @@ export default function NewTaskPage() {
       }
     })
   }
+
+  const handlePredict = async () => {
+  const title = form.getValues("title")
+  const description = form.getValues("description") || ""
+  
+  if (!title || title.length < 3) {
+    setPredictionMsg("Введите название задачи для прогноза")
+    return
+  }
+  
+  setIsPredicting(true)
+  setPredictionMsg(null)
+  
+  try {
+    const res = await predictTaskTimeWithGigaChat({
+      taskTitle: title,
+      taskDescription: description,
+    })
+    
+    // Считаем новую дату: сегодня + N дней
+    const newDate = new Date()
+    newDate.setDate(newDate.getDate() + res.days)
+    
+    // Обновляем поле dueDate в форме
+    form.setValue("dueDate", newDate.toISOString())
+    
+    setPredictionMsg(`✅ Установлено: ~${res.days} дн. (ответ модели: "${res.rawAnswer}")`)
+  } catch (error: any) {
+    setPredictionMsg(`❌ Ошибка: ${error.message || "Не удалось получить прогноз"}`)
+  } finally {
+    setIsPredicting(false)
+  }
+}
 
   const { control, formState: { errors } } = form
 
@@ -200,8 +236,16 @@ export default function NewTaskPage() {
 
             return (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel>Дедлайн</FieldLabel>
-                
+                <div className="flex items-center justify-between mb-2">
+                  <FieldLabel>Дедлайн</FieldLabel>
+                  <button
+                    type="button"
+                    onClick={handlePredict}
+                    className="inline-flex h-7 items-center justify-center rounded-md border border-input bg-background px-2.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPredicting ? "⏳ Прогноз..." : "🤖 Предсказать через GigaChat"}
+                  </button>
+                </div>
                 <Popover 
                   open={popoverOpen} 
                   onOpenChange={setPopoverOpen}
@@ -243,7 +287,12 @@ export default function NewTaskPage() {
                     />
                   </PopoverContent>
                 </Popover>
-                
+                {predictionMsg && (
+                  <p className={`mt-2 text-xs ${predictionMsg.startsWith("✅") ? "text-green-600" : "text-red-500"}`}>
+                    {predictionMsg}
+                  </p>
+                )}
+        <FieldDescription>Выберите дату вручную или используйте AI-прогноз через GigaChat.</FieldDescription>
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}
